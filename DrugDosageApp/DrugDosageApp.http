@@ -1,0 +1,6 @@
+@DrugDosageApp_HostAddress = http://localhost:5026
+
+GET {{DrugDosageApp_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
