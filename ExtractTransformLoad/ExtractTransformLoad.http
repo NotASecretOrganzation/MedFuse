@@ -1,0 +1,6 @@
+@ExtractTransformLoad_HostAddress = http://localhost:5289
+
+GET {{ExtractTransformLoad_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

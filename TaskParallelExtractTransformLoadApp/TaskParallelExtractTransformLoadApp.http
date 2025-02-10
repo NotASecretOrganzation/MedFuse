@@ -1,0 +1,6 @@
+@TaskParallelExtractTransform_LoadApp_HostAddress = http://localhost:5216
+
+GET {{TaskParallelExtractTransform_LoadApp_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
