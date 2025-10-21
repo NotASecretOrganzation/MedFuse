@@ -103,6 +103,22 @@ public class HyperLogLogController : ControllerBase
             memoryUsedBytes = 1 << precision
         });
     }
+
+    /// <summary>
+    /// Runs verification tests for HyperLogLog implementation
+    /// </summary>
+    [HttpPost("verify")]
+    public IActionResult RunVerificationTests()
+    {
+        var success = HyperLogLogVerification.RunAllTests();
+        return Ok(new
+        {
+            success,
+            message = success
+                ? "All verification tests passed. Check console output for details."
+                : "Some verification tests failed. Check console output for details."
+        });
+    }
 }
 
 /// <summary>
