@@ -318,6 +318,65 @@ $$
 $$;
 
 -- =============================================
+-- Procedure: APPROX_COUNT_DISTINCT_HLL
+-- Snowflake-style approximate distinct count using custom HyperLogLog
+-- This provides a simpler interface for approximate distinct counting
+-- =============================================
+CREATE OR REPLACE PROCEDURE APPROX_COUNT_DISTINCT_HLL(
+    TableName STRING,
+    ColumnName STRING,
+    WhereClause STRING,
+    Precision INTEGER
+)
+RETURNS INTEGER
+LANGUAGE JAVASCRIPT
+AS
+$$
+    // Generate a unique HLL ID
+    var hllId = Math.floor(Math.random() * 2147483647);
+    
+    // Initialize HyperLogLog
+    snowflake.execute({
+        sqlText: "CALL InitializeHyperLogLog(?, ?)",
+        binds: [hllId, PRECISION]
+    });
+    
+    // Build query to get distinct values
+    var whereClauseSQL = WHERECLAUSE ? ' WHERE ' + WHERECLAUSE : '';
+    var query = 'SELECT DISTINCT ' + COLUMNNAME + ' FROM ' + TABLENAME + whereClauseSQL;
+    
+    // Add all distinct values to HyperLogLog
+    var resultSet = snowflake.execute({sqlText: query});
+    
+    while (resultSet.next()) {
+        var value = resultSet.getColumnValue(1);
+        if (value !== null) {
+            snowflake.execute({
+                sqlText: "CALL AddToHyperLogLog(?, ?)",
+                binds: [hllId, String(value)]
+            });
+        }
+    }
+    
+    // Get estimate
+    var estimateResult = snowflake.execute({
+        sqlText: "SELECT EstimateCardinality(?)",
+        binds: [hllId]
+    });
+    
+    estimateResult.next();
+    var estimate = estimateResult.getColumnValue(1);
+    
+    // Clean up temporary HyperLogLog
+    snowflake.execute({
+        sqlText: "DELETE FROM HyperLogLog WHERE HllId = ?",
+        binds: [hllId]
+    });
+    
+    return estimate;
+$$;
+
+-- =============================================
 -- Example Usage and Tests
 -- =============================================
 
@@ -370,6 +429,43 @@ SELECT
     APPROX_COUNT_DISTINCT(user_id) AS native_hll_estimate,
     EstimateCardinality(10) AS custom_hll_estimate
 FROM user_events;
+*/
+
+-- Example 3b: Using APPROX_COUNT_DISTINCT_HLL procedure
+-- Insert sample data
+/*
+INSERT INTO user_events
+SELECT 
+    ROW_NUMBER() OVER (ORDER BY SEQ4()) as event_id,
+    'user_' || (UNIFORM(1, 1000, RANDOM())::STRING) as user_id,
+    DATEADD(HOUR, UNIFORM(0, 720, RANDOM()), '2025-01-01'::TIMESTAMP_NTZ) as event_timestamp
+FROM TABLE(GENERATOR(ROWCOUNT => 10000));
+
+-- Use the APPROX_COUNT_DISTINCT_HLL procedure
+DECLARE
+    approx_count INTEGER;
+    actual_count INTEGER;
+BEGIN
+    -- Get approximate count using custom HyperLogLog
+    CALL APPROX_COUNT_DISTINCT_HLL('user_events', 'user_id', NULL, 12) INTO :approx_count;
+    
+    -- Get actual count
+    SELECT COUNT(DISTINCT user_id) INTO :actual_count FROM user_events;
+    
+    -- Compare results
+    SELECT 
+        :actual_count as actual_unique_users,
+        :approx_count as estimated_unique_users,
+        ABS(:actual_count - :approx_count) / :actual_count * 100 as error_percentage;
+END;
+
+-- Use with WHERE clause
+CALL APPROX_COUNT_DISTINCT_HLL(
+    'user_events', 
+    'user_id', 
+    'event_timestamp >= ''2025-01-01'' AND event_timestamp < ''2025-01-15''',
+    12
+);
 */
 
 -- Example 4: Merging HyperLogLogs from different partitions
