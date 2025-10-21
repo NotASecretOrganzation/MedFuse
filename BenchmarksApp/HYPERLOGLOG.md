@@ -178,6 +178,29 @@ curl -X POST http://localhost:5244/api/HyperLogLog/estimate \
   -d '{"elements":["a","b","c","a","d"],"precision":12}'
 ```
 
+## SQL Implementations
+
+In addition to the C# implementation, HyperLogLog is also available for direct use in databases:
+
+### T-SQL (SQL Server)
+A complete implementation for Microsoft SQL Server using T-SQL stored procedures and functions. Ideal for:
+- Counting unique users, sessions, or events directly in SQL Server
+- Merging cardinality estimates from different partitions or time periods
+- Persistent storage of HyperLogLog state for incremental updates
+
+See [SQL/HyperLogLog_TSQL.sql](SQL/HyperLogLog_TSQL.sql) for the implementation.
+
+### Snowflake
+A JavaScript-based UDF implementation for Snowflake Data Warehouse. Features:
+- JavaScript UDFs for all core HyperLogLog operations
+- Integration with Snowflake's native data types
+- Comparison examples with Snowflake's native `APPROX_COUNT_DISTINCT()`
+
+See [SQL/HyperLogLog_Snowflake.sql](SQL/HyperLogLog_Snowflake.sql) for the implementation.
+
+### SQL Documentation
+For detailed usage examples, API reference, and best practices for both SQL implementations, see [SQL/README.md](SQL/README.md).
+
 ## References
 
 - [Wikipedia - HyperLogLog](https://en.wikipedia.org/wiki/HyperLogLog)
