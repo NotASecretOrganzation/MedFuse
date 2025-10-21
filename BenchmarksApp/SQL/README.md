@@ -186,15 +186,28 @@ SELECT EstimateCardinality(301) AS q1_total_users;
 ### When to Use Custom HyperLogLog vs Native APPROX_COUNT_DISTINCT
 
 **Use Snowflake's native `APPROX_COUNT_DISTINCT()`** when:
-- You need a one-time cardinality estimate
+- You need a one-time cardinality estimate in a query
 - You don't need to persist the HyperLogLog state
 - You don't need to merge estimates from different sources
+- Maximum simplicity is desired
 
-**Use the custom HyperLogLog implementation** when:
+**Use the `APPROX_COUNT_DISTINCT_HLL` procedure** when:
+- You want approximate distinct counts with custom HyperLogLog implementation
+- You need a simple one-call interface without managing HyperLogLog IDs
+- You want to compare results with the native function
+- You need custom precision control
+
+**Use the full custom HyperLogLog implementation** when:
 - You need precise control over precision parameter
 - You want to persist HyperLogLog state for incremental updates
 - You need to merge estimates from different partitions or time periods
 - You want to build complex workflows around cardinality estimation
+- You need to reuse and update the same HyperLogLog over time
+
+**T-SQL Considerations:**
+- SQL Server 2019+ has a native `APPROX_COUNT_DISTINCT()` aggregate function
+- Use `APPROX_COUNT_DISTINCT_EXEC` for a simplified custom HyperLogLog interface
+- Use the full HyperLogLog procedures for persistent state and merging capabilities
 
 ## API Reference
 
@@ -226,6 +239,28 @@ EXEC dbo.MergeHyperLogLog
     @SourceHllId INT   -- Source HyperLogLog (unchanged)
 ```
 
+#### APPROX_COUNT_DISTINCT_EXEC
+```sql
+EXEC dbo.APPROX_COUNT_DISTINCT_EXEC
+    @TableName NVARCHAR(256),     -- Table name
+    @ColumnName NVARCHAR(256),    -- Column to count distinct values
+    @WhereClause NVARCHAR(MAX) = NULL,  -- Optional WHERE clause (without WHERE keyword)
+    @Precision INT = 14,          -- HyperLogLog precision (4-16)
+    @Result BIGINT OUTPUT         -- Output parameter for the estimate
+```
+
+**Example:**
+```sql
+DECLARE @distinctCount BIGINT;
+EXEC dbo.APPROX_COUNT_DISTINCT_EXEC 
+    @TableName = 'Users',
+    @ColumnName = 'UserId',
+    @WhereClause = 'CreatedDate > ''2025-01-01''',
+    @Precision = 12,
+    @Result = @distinctCount OUTPUT;
+SELECT @distinctCount AS ApproximateDistinctUsers;
+```
+
 ### Snowflake API
 
 #### InitializeHyperLogLog
@@ -255,6 +290,31 @@ CALL MergeHyperLogLog(
     TargetHllId INTEGER,  -- Target HyperLogLog (will be modified)
     SourceHllId INTEGER   -- Source HyperLogLog (unchanged)
 )
+```
+
+#### APPROX_COUNT_DISTINCT_HLL
+```sql
+CALL APPROX_COUNT_DISTINCT_HLL(
+    TableName STRING,       -- Table name
+    ColumnName STRING,      -- Column to count distinct values
+    WhereClause STRING,     -- Optional WHERE clause (without WHERE keyword, use NULL if not needed)
+    Precision INTEGER       -- HyperLogLog precision (4-16)
+)
+RETURNS INTEGER;
+```
+
+**Example:**
+```sql
+-- Count distinct users
+CALL APPROX_COUNT_DISTINCT_HLL('users', 'user_id', NULL, 12);
+
+-- Count distinct users with filter
+CALL APPROX_COUNT_DISTINCT_HLL(
+    'users', 
+    'user_id', 
+    'created_date > ''2025-01-01''', 
+    14
+);
 ```
 
 ## Best Practices

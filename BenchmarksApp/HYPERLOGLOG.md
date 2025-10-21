@@ -201,6 +201,10 @@ See [SQL/HyperLogLog_Snowflake.sql](SQL/HyperLogLog_Snowflake.sql) for the imple
 ### SQL Documentation
 For detailed usage examples, API reference, and best practices for both SQL implementations, see [SQL/README.md](SQL/README.md).
 
+Both SQL implementations include:
+- `APPROX_COUNT_DISTINCT_EXEC` (T-SQL) and `APPROX_COUNT_DISTINCT_HLL` (Snowflake) procedures that provide a simplified interface for approximate distinct counting, similar to native database functions
+- Full HyperLogLog API for advanced use cases requiring persistent state and merging capabilities
+
 ## References
 
 - [Wikipedia - HyperLogLog](https://en.wikipedia.org/wiki/HyperLogLog)
